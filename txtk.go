@@ -864,6 +864,65 @@ func GetRandomInt64InRange(minA int64, maxA int64) int64 {
 	return randT
 }
 
+// RandomX 是一个线程不安全的随机数产生器
+type RandomX struct {
+	r uint64
+}
+
+func (p *RandomX) Randomize() {
+	tmpc := time.Now().UnixNano()
+
+	tmpc = (tmpc & 0x0000FFFF) ^ tmpc
+
+	p.r = uint64(tmpc)
+}
+
+func NewRandomGenerator() *RandomX {
+	p := &RandomX{r: 0}
+
+	p.Randomize()
+
+	return p
+}
+
+func (p *RandomX) Int64() int64 {
+	tmpc := p.r
+
+	tmpc ^= tmpc << 13
+	tmpc ^= tmpc >> 17
+	tmpc ^= tmpc << 5
+
+	if tmpc < 0 {
+		tmpc = -tmpc
+	}
+
+	p.r = tmpc
+	return int64(tmpc)
+}
+
+func (p *RandomX) Float64() float64 {
+	tmpc := p.Int64N(1000000000)
+
+	tmpf := float64(tmpc) / 1000000000.0
+
+	return tmpf
+}
+
+func (p *RandomX) Int64N(maxA int64) int64 {
+	tmpc := p.Int64() % maxA
+	if tmpc < 0 {
+		tmpc = -tmpc
+	}
+
+	return tmpc
+}
+
+func (p *RandomX) Int() int {
+	tmpc := p.Int64()
+
+	return int(tmpc)
+}
+
 // ShuffleStringArray 把字符串数组随机化打乱timesA次
 func ShuffleStringArray(aryA []string, timesA int) {
 	Randomize()
@@ -2231,6 +2290,34 @@ func DownloadPageUTF8(urlA string, postDataA url.Values, customHeaders string, t
 	} else {
 		return GenerateErrorString(errT.Error())
 	}
+}
+
+// PostRequest : another POST request sender
+func PostRequest(url, reqBody string) (string, error) {
+
+	req, err := http.NewRequest("POST", url, strings.NewReader(reqBody))
+
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", "application/json; encoding=utf-8")
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 func GetFormValueWithDefaultValue(reqA *http.Request, keyA string, defaultA string) string {
