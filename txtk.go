@@ -23,6 +23,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
 // 类型 types structs
@@ -123,6 +126,24 @@ func (p *TXCollection) GetListString(ifUpA bool, sepA string) string {
 	}
 
 	return strings.Join(rs, sepA)
+}
+
+// 存放TX格式的网络API返回结果
+type TXResult struct {
+	Status string
+	Value  string
+}
+
+func TXResultFromString(strA string) (*TXResult, error) {
+	p := new(TXResult)
+
+	errT := json.Unmarshal([]byte(strA), p)
+
+	if errT != nil {
+		return nil, errT
+	}
+
+	return p, nil
 }
 
 // 全局变量 global variables
@@ -398,6 +419,45 @@ func EnsureValidFileNameX(fileNameA string) string {
 
 	tmps = RegReplace(tmps, `(%[A-F0-9]?)(\.[^\.]*?)$`, "$2")
 	return tmps
+}
+
+// ConvertToGB18030 转换UTF-8字符串为GB18030编码
+func ConvertToGB18030(srcA string) string {
+	dst := make([]byte, len(srcA)*2)
+	transformer := simplifiedchinese.GB18030.NewEncoder()
+	nDst, _, err := transformer.Transform(dst, []byte(srcA), true)
+	if err != nil {
+		return GenerateErrorStringF("encoding failed")
+	}
+	return string(dst[:nDst])
+}
+
+// ConvertToUTF8 转换GB18030编码等字符串为UTF-8字符串
+func ConvertToUTF8(srcA []byte, srcEncA string) string {
+	srcEncT := srcEncA
+
+	switch srcEncT {
+	case "", "GB18030", "gb18030", "GBK", "gbk", "GB2312", "gb2312":
+		dst := make([]byte, len(srcA)*2)
+		transformer := simplifiedchinese.GB18030.NewDecoder()
+		nDst, _, err := transformer.Transform(dst, srcA, true)
+		if err != nil {
+			return GenerateErrorStringF("encoding failed: %v", err.Error())
+		}
+		return string(dst[:nDst])
+	case "utf-8", "UTF-8":
+		return string(srcA)
+	case "windows-1252", "windows1252":
+		dst := make([]byte, len(srcA)*2)
+		transformer := charmap.Windows1252.NewDecoder()
+		nDst, _, err := transformer.Transform(dst, srcA, true)
+		if err != nil {
+			return GenerateErrorStringF("encoding failed: %v", srcEncA)
+		}
+		return string(dst[:nDst])
+	default:
+		return GenerateErrorStringF("unknown encoding: %v", srcEncA)
+	}
 }
 
 // TXString 相关
@@ -2234,7 +2294,7 @@ func GetDebug() string {
 func DownloadPageUTF8(urlA string, postDataA url.Values, customHeaders string, timeoutSecsA time.Duration) string {
 	client := &http.Client{
 		//CheckRedirect: redirectPolicyFunc,
-		Timeout: 1000000000 * timeoutSecsA,
+		Timeout: time.Second * timeoutSecsA,
 	}
 
 	var urlT string
@@ -2293,9 +2353,9 @@ func DownloadPageUTF8(urlA string, postDataA url.Values, customHeaders string, t
 }
 
 // PostRequest : another POST request sender
-func PostRequest(url, reqBody string) (string, error) {
+func PostRequest(urlA, reqBodyA string, timeoutSecsA time.Duration) (string, error) {
 
-	req, err := http.NewRequest("POST", url, strings.NewReader(reqBody))
+	req, err := http.NewRequest("POST", urlA, strings.NewReader(reqBodyA))
 
 	if err != nil {
 		return "", err
@@ -2303,7 +2363,10 @@ func PostRequest(url, reqBody string) (string, error) {
 
 	req.Header.Set("Content-Type", "application/json; encoding=utf-8")
 
-	client := &http.Client{}
+	client := &http.Client{
+		//CheckRedirect: redirectPolicyFunc,
+		Timeout: time.Second * timeoutSecsA,
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
