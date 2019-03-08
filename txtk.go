@@ -2352,6 +2352,71 @@ func DownloadPageUTF8(urlA string, postDataA url.Values, customHeaders string, t
 	}
 }
 
+// DownloadPage download page with any encoding and convert to UTF-8
+func DownloadPage(urlA string, originalEncodingA string, postDataA url.Values, customHeaders string, timeoutSecsA time.Duration) string {
+	client := &http.Client{
+		Timeout: time.Second * timeoutSecsA,
+	}
+
+	var urlT string
+	if !strings.HasPrefix(strings.ToLower(urlA), "http") {
+		urlT = "http://" + urlA
+	} else {
+		urlT = urlA
+	}
+
+	var respT *http.Response
+	var errT error
+	var req *http.Request
+
+	if Trim(customHeaders) != "" {
+		if postDataA == nil {
+			req, errT = http.NewRequest("GET", urlT, nil)
+		} else {
+			req, errT = http.NewRequest("POST", urlT, nil)
+			req.PostForm = postDataA
+		}
+
+		headersT := SplitLines(customHeaders)
+
+		for i := 0; i < len(headersT); i++ {
+			lineT := headersT[i]
+			aryT := strings.Split(lineT, ":")
+			req.Header.Add(aryT[0], Replace(aryT[1], "`", ":"))
+		}
+
+		respT, errT = client.Do(req)
+	} else {
+		if postDataA == nil {
+			respT, errT = client.Get(urlT)
+		} else {
+			respT, errT = client.PostForm(urlT, postDataA)
+		}
+	}
+
+	if errT == nil {
+		defer respT.Body.Close()
+		if respT.StatusCode != 200 {
+			return GenerateErrorStringF("response status: %v", respT.StatusCode)
+		} else {
+			body, errT := ioutil.ReadAll(respT.Body)
+
+			if errT == nil {
+				if (originalEncodingA == "") || (strings.ToLower(originalEncodingA) == "utf-8") {
+					return string(body)
+				} else {
+					return ConvertToUTF8(body, originalEncodingA)
+				}
+			} else {
+				return GenerateErrorString(errT.Error())
+			}
+		}
+	} else {
+		return GenerateErrorString(errT.Error())
+	}
+
+}
+
 // PostRequest : another POST request sender
 func PostRequest(urlA, reqBodyA string, timeoutSecsA time.Duration) (string, error) {
 
