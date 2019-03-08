@@ -1262,6 +1262,16 @@ func Pl(formatA string, argsA ...interface{}) {
 	fmt.Printf(formatA+"\n", argsA...)
 }
 
+// Printf 仅仅封装了fmt.Printf函数，与其完全一致
+func Printf(format string, a ...interface{}) {
+	fmt.Printf(format, a...)
+}
+
+// Printfln 仅仅封装了fmt.Printf函数，但结尾会多输出一个换行符
+func Printfln(format string, a ...interface{}) {
+	fmt.Printf(format+"\n", a...)
+}
+
 func PlvWithError(vA interface{}, errStrA string) {
 	if errStrA == "" {
 		fmt.Printf("%v\n", vA)
