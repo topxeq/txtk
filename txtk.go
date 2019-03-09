@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -2561,7 +2562,57 @@ func GetSuccessValue(strA string) string {
 	return valueT
 }
 
-// 事件相关
+// 数学相关 math related
+
+func Float32ArrayToFloat64Array(aryA []float32) []float64 {
+	if aryA == nil {
+		return nil
+	}
+
+	rs := make([]float64, len(aryA))
+
+	for i := 0; i < len(aryA); i++ {
+		rs[i] = float64(aryA[i])
+	}
+
+	return rs
+}
+
+func CalCosineSimilarityBetweenFloatsBig(f1, f2 []float64) float64 {
+	if f1 == nil || f2 == nil {
+		return -1
+	}
+
+	l1 := len(f1)
+	l2 := len(f2)
+
+	if l1 != l2 {
+		return -1
+	}
+
+	var rr *big.Float = new(big.Float)
+	var f1r *big.Float = new(big.Float)
+	var f2r *big.Float = new(big.Float)
+
+	for i := 0; i < l1; i++ {
+		f1b := new(big.Float).SetFloat64(f1[i])
+		f2b := new(big.Float).SetFloat64(f2[i])
+		rr.Add(rr, new(big.Float).Mul(f1b, f2b))
+		f1r.Add(f1r, new(big.Float).Mul(f1b, f1b))
+		f2r.Add(f2r, new(big.Float).Mul(f2b, f2b))
+	}
+
+	tmprs1 := f1r.Sqrt(f1r)
+	tmprs2 := f2r.Sqrt(f2r)
+
+	tmprsr := new(big.Float).Mul(tmprs1, tmprs2)
+
+	rs, _ := (rr.Quo(rr, tmprsr)).Float64()
+
+	return rs
+}
+
+// 事件相关 event related
 
 // SimpleEvent 简捷的事件结构
 type SimpleEvent struct {
