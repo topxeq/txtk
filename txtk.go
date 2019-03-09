@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/aes"
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -2143,6 +2144,14 @@ func DecodeStringSimple(s string) string {
 		}
 	}
 	return string(t)
+}
+
+func MD5Encrypt(strA string) string {
+	tmpb := md5.Sum([]byte(strA))
+
+	tmpbb := tmpb[:]
+
+	return string(tmpbb)
 }
 
 // 加密解密相关
