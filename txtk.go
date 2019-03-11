@@ -804,8 +804,6 @@ func LoadDualLineListFromString(strA string) [][]string {
 	return bufT
 }
 
-// SimpleMap related
-
 // 正则表达式相关 regex related
 
 func RegReplace(strA, patternA, replaceA string) string {
@@ -1987,6 +1985,8 @@ func AppendDualLineList(listA [][]string, fileNameA string) string {
 	return SaveStringList(bufT, fileNameA)
 }
 
+// SimpleMap related
+
 func LoadSimpleMapFromFile(fileNameA string) map[string]string {
 	if !IfFileExists(fileNameA) {
 		return nil
@@ -2006,6 +2006,82 @@ func LoadSimpleMapFromFile(fileNameA string) map[string]string {
 			continue
 		}
 		mapT[Replace(lineListT[0], "`EQ`", "=")] = RestoreLineEnds(lineListT[1], "#CR#")
+	}
+
+	return mapT
+}
+
+func ReplaceLineEnds(strA string, replacementA string) string {
+	rs := strings.Replace(strA, "\r", "", -1)
+	rs = strings.Replace(rs, "\n", replacementA, -1)
+	return rs
+}
+
+func SaveSimpleMapToFile(mapA map[string]string, fileA string) string {
+	fileT, errT := os.Create(fileA)
+	if errT != nil {
+		return GenerateErrorString(errT.Error())
+	}
+
+	defer fileT.Close()
+
+	wFile := bufio.NewWriter(fileT)
+
+	var kk string
+
+	if mapA != nil {
+		for k, v := range mapA {
+			kk = Replace(k, "=", "`EQ`")
+			wFile.WriteString(kk + "=" + ReplaceLineEnds(v, "#CR#") + "\n")
+		}
+	}
+
+	wFile.Flush()
+
+	return ""
+}
+
+func AppendSimpleMapFromFile(mapA map[string]string, fileNameA string) string {
+	if !IfFileExists(fileNameA) {
+		return "file not exists"
+	}
+
+	strListT, errStrT := LoadStringList(fileNameA)
+
+	if errStrT != "" {
+		return "fail to load file content"
+	}
+
+	for i := range strListT {
+		lineT := strListT[i]
+		lineListT := strings.SplitN(lineT, "=", 2)
+		if (lineListT == nil) || (len(lineListT) < 2) {
+			continue
+		}
+
+		mapA[Replace(lineListT[0], "`EQ`", "=")] = RestoreLineEnds(lineListT[1], "#CR#")
+	}
+
+	return ""
+}
+
+func LoadSimpleMapFromDir(dirA string) map[string]string {
+	if !IfFileExists(dirA) {
+		return nil
+	}
+
+	if !IsDirectory(dirA) {
+		return nil
+	}
+
+	mapT := make(map[string]string)
+	files := GenerateFileListRecursively(dirA, "*.txt")
+	if files == nil {
+		return nil
+	}
+
+	for _, v := range files {
+		AppendSimpleMapFromFile(mapT, v)
 	}
 
 	return mapT
