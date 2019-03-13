@@ -764,6 +764,16 @@ func LoadStringTX(fileNameA string) *TXString {
 	return CreateStringSimple(string(fileContentT))
 }
 
+func RegContains(strA, patternA string) bool {
+	regexpT, errT := regexp.Compile(patternA)
+
+	if errT != nil {
+		return false
+	}
+
+	return !(regexpT.FindStringIndex(strA) == nil)
+}
+
 func RegFindFirstTX(strA, patternA string, groupA int) *TXString {
 	regexpT, errT := regexp.Compile(patternA)
 
