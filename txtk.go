@@ -434,6 +434,21 @@ func ConvertToGB18030(srcA string) string {
 	return string(dst[:nDst])
 }
 
+// ConvertToGB18030Bytes 转换UTF-8字符串为GB18030编码的字节切片
+func ConvertToGB18030Bytes(srcA string) []byte {
+	dst := make([]byte, len(srcA)*2)
+
+	transformer := simplifiedchinese.GB18030.NewEncoder()
+
+	nDst, _, err := transformer.Transform(dst, []byte(srcA), true)
+
+	if err != nil {
+		return nil
+	}
+
+	return dst[:nDst]
+}
+
 // ConvertToUTF8 转换GB18030编码等字符串为UTF-8字符串
 func ConvertToUTF8(srcA []byte, srcEncA string) string {
 	srcEncT := srcEncA
