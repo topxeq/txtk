@@ -2322,11 +2322,11 @@ func AESDecrypt(src, key []byte) ([]byte, error) {
 	//	Printf("Key: %v\n", key)
 	//	Printf("Block size: %v\n", bs)
 	//	src = zeroPadding(src, bs)
-	beforeLen := len(src)
-	src = Pkcs7Padding(src, bs)
-	afterLen := len(src)
-	diffLen := afterLen - beforeLen
-	//	Pl("beforeLen: %v, afterLen: %v, diffLen: %v", beforeLen, afterLen, diffLen)
+	// beforeLen := len(src)
+	// // src = Pkcs7Padding(src, bs)
+	// afterLen := len(src)
+	// diffLen := afterLen - beforeLen
+	// Pl("beforeLen: %v, afterLen: %v, diffLen: %v", beforeLen, afterLen, diffLen)
 	//	Pl("After padding: %v", src)
 	if len(src)%bs != 0 {
 		return nil, errors.New("Need a multiple of the blocksize")
@@ -2352,7 +2352,21 @@ func AESDecrypt(src, key []byte) ([]byte, error) {
 		dst = dst[bs:]
 	}
 
-	out = out[:len(out)-diffLen]
+	outLenT := len(out)
+	unpadLenT := int(out[outLenT-1])
+
+	if unpadLenT < outLenT {
+		for i := 0; i < unpadLenT; i++ {
+			if out[outLenT-1-i] != byte(unpadLenT) {
+				return out, nil
+			}
+		}
+
+		out = out[:outLenT-unpadLenT]
+	}
+
+	// Pl("out len: %v", len(out))
+	// out = out[:len(out)-diffLen]
 	return out, nil
 }
 
